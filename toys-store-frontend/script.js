@@ -1,32 +1,48 @@
-document.addEventListener("DOMContentLoaded", () => {
+const API_URL = 'https://your-backend-url.com/api/toys';
+
+// Lấy danh sách sản phẩm
+async function fetchToys() {
+    const res = await fetch(API_URL);
+    const toys = await res.json();
+    const toyList = document.getElementById('toy-list');
+    toyList.innerHTML = '';
+
+    toys.forEach(toy => {
+        toyList.innerHTML += `
+            <tr>
+                <td>${toy.name}</td>
+                <td>${toy.price} $</td>
+                <td>${toy.stock}</td>
+                <td><img src="${toy.image}" width="50"></td>
+                <td>
+                    <button onclick="deleteToy('${toy._id}')">Xóa</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Thêm sản phẩm
+document.getElementById('toy-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const price = document.getElementById('price').value;
+    const stock = document.getElementById('stock').value;
+
+    await fetch(API_URL + '/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price, stock })
+    });
+
     fetchToys();
 });
 
-async function fetchToys() {
-    try {
-        const response = await fetch("https://toys-store.onrender.com/api/toys");
-        const toys = await response.json();
-
-        const toyList = document.getElementById("toy-list");
-        toyList.innerHTML = ""; // Xóa nội dung cũ
-
-        toys.forEach(toy => {
-            const toyCard = document.createElement("div");
-            toyCard.classList.add("col-md-4");
-
-            toyCard.innerHTML = `
-                <div class="card mb-3">
-                    <img src="${toy.image || 'https://via.placeholder.com/200'}" class="card-img-top" alt="${toy.name}">
-                    <div class="card-body">
-                        <h5 class="card-title">${toy.name}</h5>
-                        <p class="card-text">Giá: $${toy.price}</p>
-                        <p class="card-text">Số lượng: ${toy.stock}</p>
-                    </div>
-                </div>
-            `;
-            toyList.appendChild(toyCard);
-        });
-    } catch (error) {
-        console.error("Lỗi khi lấy danh sách đồ chơi:", error);
-    }
+// Xóa sản phẩm
+async function deleteToy(id) {
+    await fetch(API_URL + `/delete/${id}`, { method: 'DELETE' });
+    fetchToys();
 }
+
+// Load sản phẩm khi trang mở
+fetchToys();
