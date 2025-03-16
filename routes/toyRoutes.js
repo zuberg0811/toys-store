@@ -1,69 +1,68 @@
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-const Toy = require('../models/ToyModel');
+const Toy = require('../models/toyModel');
 
 const router = express.Router();
-
-// Kiểm tra thư mục 'uploads/', nếu chưa có thì tạo mới
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
 
 // Cấu hình lưu ảnh vào thư mục 'uploads/'
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    cb(null, 'uploads/'); // Lưu ảnh vào thư mục uploads/
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
+const upload = multer({ storage: storage });
 
-// Kiểm tra định dạng ảnh hợp lệ
-const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Chỉ chấp nhận file ảnh có định dạng .jpg, .jpeg, .png, .webp'), false);
-  }
-};
-
-const upload = multer({ storage: storage, fileFilter: fileFilter });
-
-// API thêm sản phẩm với ảnh
-router.post('/add', upload.single('image'), async (req, res) => {
-  try {
-    const { name, price, category } = req.body;
-
-    // Kiểm tra nếu không có file được tải lên
-    if (!req.file) {
-      return res.status(400).json({ error: 'Vui lòng chọn ảnh để tải lên!' });
-    }
-
-    const imagePath = `/uploads/${req.file.filename}`;
-
-    const newToy = new Toy({ name, price, category, image: imagePath });
-    await newToy.save();
-
-    res.status(201).json({ message: 'Thêm đồ chơi thành công!', toy: newToy });
-  } catch (error) {
-    console.error('Lỗi khi thêm đồ chơi:', error);
-    res.status(500).json({ error: 'Lỗi khi thêm đồ chơi' });
-  }
-});
-
-// API lấy danh sách đồ chơi
+// Lấy danh sách sản phẩm
 router.get('/', async (req, res) => {
   try {
     const toys = await Toy.find();
     res.json(toys);
   } catch (error) {
-    console.error('Lỗi khi lấy danh sách đồ chơi:', error);
     res.status(500).json({ error: 'Lỗi khi lấy danh sách đồ chơi' });
+  }
+});
+
+// Thêm sản phẩm mới
+router.post('/add', upload.single('image'), async (req, res) => {
+  try {
+    const { name, price, stock } = req.body;
+    const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
+
+    const newToy = new Toy({ name, price, stock, image: imagePath });
+    await newToy.save();
+
+    res.status(201).json({ message: 'Thêm đồ chơi thành công!', toy: newToy });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi khi thêm đồ chơi' });
+  }
+});
+
+// Cập nhật sản phẩm
+router.put('/update/:id', async (req, res) => {
+  try {
+    const { name, price, stock } = req.body;
+    const updatedToy = await Toy.findByIdAndUpdate(req.params.id, { name, price, stock }, { new: true });
+
+    if (!updatedToy) return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
+
+    res.json({ message: 'Cập nhật thành công!', toy: updatedToy });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi khi cập nhật sản phẩm' });
+  }
+});
+
+// Xóa sản phẩm
+router.delete('/delete/:id', async (req, res) => {
+  try {
+    const deletedToy = await Toy.findByIdAndDelete(req.params.id);
+    if (!deletedToy) return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
+
+    res.json({ message: 'Xóa sản phẩm thành công!' });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi khi xóa sản phẩm' });
   }
 });
 
