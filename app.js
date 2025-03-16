@@ -8,6 +8,11 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.get('/', (req, res) => {
+  res.send('Chào mừng đến với Toys Store API!');
+});
+
+
 // Middleware
 app.use(express.json());
 app.use(cors());
